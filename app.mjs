@@ -1,4 +1,5 @@
-import {openCamera,playCamera,withDeadline,cameraAdvice} from './camera-compat.mjs?v=20261110-1';
+import {HandTracker} from './hand-tracker.mjs?v=20261110-2';
+import {openCamera,playCamera,withDeadline,cameraAdvice} from './camera-compat.mjs?v=20261110-2';
 import {FrameStore} from './frame-store.mjs';
 import {buildings} from './buildings.mjs';
 import {clamp,median,pinchRatio,progressFromRatio,smooth,frameIndex} from './core.mjs';
@@ -58,9 +59,8 @@ async function getModel(){
   const {FilesetResolver,HandLandmarker}=await import('./vision_bundle.mjs');
   const assetBase=new URL('./',import.meta.url).href;
   const fs=await FilesetResolver.forVisionTasks(assetBase);
-  const options={baseOptions:{modelAssetPath:new URL('hand_landmarker.task',assetBase).href,delegate:'GPU'},runningMode:'VIDEO',numHands:1,minHandDetectionConfidence:.6,minHandPresenceConfidence:.6,minTrackingConfidence:.6};
-  try{return await HandLandmarker.createFromOptions(fs,options);}
-  catch(error){console.warn('GPU unavailable; using CPU',error);options.baseOptions.delegate='CPU';return await HandLandmarker.createFromOptions(fs,options);}
+  const options={baseOptions:{modelAssetPath:new URL('hand_landmarker.task',assetBase).href,delegate:'CPU'},runningMode:'VIDEO',numHands:1,minHandDetectionConfidence:.4,minHandPresenceConfidence:.4,minTrackingConfidence:.4};
+  return await HandLandmarker.createFromOptions(fs,options);
  })().then(m=>{landmarker=m;return m;}).catch(e=>{modelPromise=null;throw e;});}
  return modelPromise;
 }
@@ -69,7 +69,7 @@ function finishSample(){const run=sampleRun;sampleRun=null;el.recordCalibration.
  const value=median(run.values);if(calibrationStep===0){recordedClose=value;calibrationStep=1;el.stepClose.classList.remove('active');el.stepOpen.classList.add('active');el.calibrationText.textContent='第二步：将拇指与食指分开到舒适的最大距离，保持稳定，再点击记录。';el.recordCalibration.textContent='记录分开位置';el.calibrationNote.textContent='无需用力撑开，保持与捏紧时相近的手掌朝向。';}
  else if(value-recordedClose<.25){el.calibrationNote.textContent='两次距离太接近。请进一步分开拇指与食指后重试。';}
  else{closeRatio=recordedClose;openRatio=value;try{localStorage.setItem('yunda-pinch-range-v1',JSON.stringify({close:closeRatio,open:openRatio}));}catch{}el.calibrationDialog.close();say('校准完成。慢慢分开、捏合两指，让建筑跟随你。');filteredRatio=null;}}
-function onHand(lm,now){drawHand(lm);if(!lm){currentRatio=null;filteredRatio=null;el.cameraBadge.textContent='寻找手部';if(now-lastHandAt>300&&!el.calibrationDialog.open&&now>=manualUntil&&mode!=='demo')say('未看到手，画面已保持。请将手放回镜头。');return;}
+function onHand(lm,now){drawHand(lm);if(!lm){currentRatio=null;filteredRatio=null;el.cameraBadge.textContent='寻找手部';if(now-lastHandAt>300&&!el.calibrationDialog.open&&now>=manualUntil&&mode!=='demo')say('尚未检测到手。请先张开五指，让整只手和手腕完整入镜；出现连线后，再捏合拇指与食指。');return;}
  const r=pinchRatio(lm,el.camera.videoWidth,el.camera.videoHeight);if(r===null)return;
  const wasLost=now-lastHandAt>300;lastHandAt=now;currentRatio=r;el.cameraBadge.textContent='两指已识别';
  if(sampleRun){sampleRun.values.push(r);if(now-sampleRun.start>=800)finishSample();}
@@ -81,8 +81,28 @@ function onHand(lm,now){drawHand(lm);if(!lm){currentRatio=null;filteredRatio=nul
  mode='gesture';if(Math.abs(p-target)>.008||p===0||p===1||wasLost)target=p;
  say('两指分开，建筑展开；两指捏合，折回纸团。');
 }
-function detectLoop(now,mySession){if(!cameraActive||mySession!==session)return;
- if(now-lastDetect>=50&&el.camera.readyState>=2&&el.camera.currentTime!==lastVideoTime&&!detectBusy){lastDetect=now;lastVideoTime=el.camera.currentTime;detectBusy=true;try{const result=landmarker.detectForVideo(el.camera,now);onHand(result.landmarks?.[0],now);}catch(err){console.error('Hand detection:',err);stopCamera();say('手势识别暂时中断，可重新开启；滑杆仍可使用。',true);return;}finally{detectBusy=false;}}
+let tracker=null,lastTrackerStats=0;
+function detectLoop(now,mySession){
+ if(!cameraActive||mySession!==session)return;
+ if(now-lastDetect>=65&&!detectBusy){
+  lastDetect=now;detectBusy=true;
+  try{
+   if(!tracker)tracker=new HandTracker(document.createElement('canvas'));
+   const result=tracker.detect(el.camera,landmarker,now);
+   if(result){
+    onHand(result.landmarks?.[0],now);
+    if(now-lastTrackerStats>300){lastTrackerStats=now;$('handStats').textContent=`兼容识别 · 已分析 ${tracker.frames} 帧 · ${result.landmarks?.length?'已检测到手':'等待完整手掌'}`;}
+   }else{
+    $('handStats').textContent='等待摄像头画面…';
+    if(el.camera.paused){$('cameraResume').hidden=false;say('摄像头画面已暂停，请点“继续播放摄像头”。',true);}
+   }
+  }catch(error){
+   console.error('Hand detection:',error);cameraActive=false;mode='manual';target=current;el.calibrate.disabled=true;drawHand(null);
+   cameraButton('重试手势识别');$('cameraHelp').open=true;
+   $('handStats').textContent='识别中断 · '+(error.name||'Error');
+   say('摄像头仍然开启，手势识别中断。请点“重新识别”，无需重新授权相机。',true);return;
+  }finally{detectBusy=false;}
+ }
  if(sampleRun&&now-sampleRun.start>1800)finishSample();
  requestAnimationFrame(t=>detectLoop(t,mySession));
 }
@@ -92,7 +112,7 @@ const cameraButton=text=>{el.cameraToggle.querySelector('span').textContent=text
 function cameraFailure(error,stage){
  cameraStage=stage;lastCameraError=error.name||'UnknownError';
  $('cameraHelp').open=true;
- $('cameraDetail').textContent=`阶段：${stage==='model'?'手势识别':stage==='video'?'视频预览':'摄像头授权'} · ${lastCameraError} · 相机兼容版 20261110.1`;
+ $('cameraDetail').textContent=`阶段：${stage==='model'?'手势识别':stage==='video'?'视频预览':'摄像头授权'} · ${lastCameraError} · 相机兼容版 20261110.2`;
  say(cameraAdvice(error,{stage,wechat:inWechat,ios:isIOS}),true);
 }
 function stopCamera(){
@@ -100,7 +120,7 @@ function stopCamera(){
  stream?.getTracks().forEach(t=>t.stop());stream=null;el.camera.srcObject=null;
  el.cameraBox.classList.remove('on');el.cameraPlaceholder.hidden=false;el.cameraPlaceholder.style.display='';drawHand(null);
  el.cameraBadge.textContent='摄像头已关闭';el.cameraToggle.disabled=false;cameraButton('开启手势体验');
- $('cameraStop').hidden=true;$('cameraResume').hidden=true;el.calibrate.disabled=true;lastHandAt=0;currentRatio=null;filteredRatio=null;sampleRun=null;
+ $('cameraStop').hidden=true;$('cameraResume').hidden=true;$('restartTracking').hidden=true;$('handStats').textContent='';tracker=null;el.calibrate.disabled=true;lastHandAt=0;currentRatio=null;filteredRatio=null;sampleRun=null;
  if(el.calibrationDialog.open)el.calibrationDialog.close();if(mode!=='demo'){mode='manual';target=current;}
  say('摄像头已关闭，可以继续拖动滑杆。');
 }
@@ -127,10 +147,10 @@ async function startCamera(){
   el.cameraBadge.textContent='摄像头已打开';
   stage='model';cameraStage=stage;cameraButton('正在加载手势识别…');say('摄像头已打开。首次下载手势识别资源可能需要一些时间，请保持页面打开。');
   await withDeadline(getModel(),90000,'ModelTimeout');if(mySession!==session)return;
-  cameraActive=true;cameraStarting=false;cameraStage='ready';mode='gesture';lastHandAt=0;lastVideoTime=-1;filteredRatio=null;manualUntil=0;
+  cameraActive=true;cameraStarting=false;cameraStage='ready';mode='gesture';lastHandAt=0;lastVideoTime=-1;lastDetect=-Infinity;tracker=new HandTracker(document.createElement('canvas'));filteredRatio=null;manualUntil=0;$('restartTracking').hidden=false;$('handStats').textContent='兼容识别已启动 · 请先张开整只手';
   el.cameraToggle.disabled=false;cameraButton('关闭摄像头');el.calibrate.disabled=false;el.cameraBadge.textContent='寻找手部';
-  $('cameraHelp').open=false;$('cameraDetail').textContent='相机兼容版 20261110.1 · 摄像头与手势识别已就绪';
-  say('让手掌朝向镜头，分开拇指与食指；可校准个人范围。');requestAnimationFrame(t=>detectLoop(t,mySession));
+  $('cameraHelp').open=false;$('cameraDetail').textContent='相机兼容版 20261110.2 · 摄像头与手势识别已就绪';
+  say('请先张开五指，让整只手和手腕进入镜头；看到手部连线后，再用拇指和食指控制。');requestAnimationFrame(t=>detectLoop(t,mySession));
  }catch(error){
   console.error('Camera setup:',stage,error);if(mySession!==session)return;
   cameraStarting=false;el.cameraToggle.disabled=false;
@@ -141,7 +161,17 @@ async function startCamera(){
 }
 el.cameraToggle.addEventListener('click',()=>cameraActive?stopCamera():startCamera());
 $('cameraStop').addEventListener('click',stopCamera);
-$('cameraResume').addEventListener('click',startCamera);
+$('cameraResume').addEventListener('click',async()=>{
+ if(!stream)return startCamera();
+ try{await playCamera(el.camera,stream);$('cameraResume').hidden=true;if(!cameraActive)await startCamera();}
+ catch(error){cameraFailure(error,'video');}
+});
+$('restartTracking').addEventListener('click',async()=>{
+ if(cameraStarting)return;
+ cameraActive=false;session++;target=current;mode='manual';drawHand(null);el.calibrate.disabled=true;
+ landmarker?.close();landmarker=null;modelPromise=null;tracker=null;
+ await startCamera();
+});
 $('checkGesture').addEventListener('click',async()=>{
  const button=$('checkGesture');button.disabled=true;button.textContent='正在检查识别资源…';
  $('cameraDetail').textContent='正在加载本网站的识别程序与模型，不会打开摄像头。首次检查可能需要约一分钟。';
@@ -150,7 +180,7 @@ $('checkGesture').addEventListener('click',async()=>{
  finally{button.disabled=false;button.textContent='检查手势识别资源';}
 });
 $('cameraLink').addEventListener('click',async()=>{
- const url=new URL(location.href);url.search='?v=20261110-1';url.hash='';
+ const url=new URL(location.href);url.search='?v=20261110-2';url.hash='';
  try{await navigator.clipboard.writeText(url.href);$('cameraLink').textContent='网址已复制，请粘贴到系统浏览器';}
  catch{$('cameraDetail').textContent='请长按复制网址：'+url.href;}
 });

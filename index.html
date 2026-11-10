@@ -9,7 +9,7 @@
 <meta property="og:title" content="LLP · 掌间云大">
 <meta property="og:description" content="四处云大风景，一捏一展。打开即可体验，无需注册。">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M10 44V25L32 12l22 13v19L32 56Z' fill='%23b95c3f'/%3E%3Cpath d='m10 25 22 13 22-13M32 38v18' fill='none' stroke='%23fff' stroke-width='2'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="./style.css?v=20261110-1">
+<link rel="stylesheet" href="./style.css?v=20261110-2">
 </head>
 <body>
 <header class="topbar"><a class="brand" href="./" aria-label="LLP 掌间云大首页"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 12 16 5l12 7v14H4Z"/><path d="m4 12 12 7 12-7M16 19v7"/></svg><span>LLP · 掌间云大</span><small>YUNNAN · IN YOUR HANDS</small></a><span class="edition">四处风景 · 一捏一展</span></header>
@@ -28,11 +28,12 @@
 </div>
 <aside class="side-panel">
  <div class="panel-heading"><span class="eyebrow">GESTURE CONTROL</span><h2>用指尖，打开它。</h2></div>
- <div class="camera-box" id="cameraBox"><video id="camera" autoplay playsinline webkit-playsinline muted x5-playsinline="true" x5-video-player-type="h5-page"></video><canvas id="overlay"></canvas><div class="camera-placeholder" id="cameraPlaceholder"><svg viewBox="0 0 160 110" aria-hidden="true"><path d="M52 90V57c0-7 11-8 12 0V40c0-9 12-9 12 0v16-39c0-10 13-10 13 0v39l19-19c7-7 16 2 10 9L95 75v15"/><circle cx="82" cy="17" r="4"/><circle cx="114" cy="41" r="4"/><path class="dash" d="m89 19 19 17"/></svg><p>让拇指和食指进入镜头</p><small>其余手指自然弯曲即可</small></div><span class="camera-badge" id="cameraBadge">摄像头未开启</span></div>
+ <div class="camera-box" id="cameraBox"><video id="camera" autoplay playsinline webkit-playsinline muted x5-playsinline="true" x5-video-player-type="h5-page"></video><canvas id="overlay"></canvas><div class="camera-placeholder" id="cameraPlaceholder"><svg viewBox="0 0 160 110" aria-hidden="true"><path d="M52 90V57c0-7 11-8 12 0V40c0-9 12-9 12 0v16-39c0-10 13-10 13 0v39l19-19c7-7 16 2 10 9L95 75v15"/><circle cx="82" cy="17" r="4"/><circle cx="114" cy="41" r="4"/><path class="dash" d="m89 19 19 17"/></svg><p>先让整只手完整进入镜头</p><small>张开五指，看到连线后再捏合</small></div><span class="camera-badge" id="cameraBadge">摄像头未开启</span></div>
+ <p id="handStats" class="hand-stats" aria-live="off"></p>
  <p class="tracking-status" id="trackingStatus" role="status" aria-live="polite">先拖动下方滑杆，或开启摄像头体验。</p>
  <button class="primary" id="cameraToggle"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="12" height="12" rx="3"/><path d="m15 10 6-3v10l-6-3"/></svg><span>开启手势体验</span><span class="arrow">↗</span></button>
- <div class="camera-recovery"><button id="cameraResume" type="button" hidden>继续播放摄像头</button><button id="cameraStop" type="button" hidden>关闭 / 取消摄像头</button></div>
- <details id="cameraHelp" class="camera-help"><summary>摄像头打不开？</summary><p>① 在本页点击开启，允许相机权限。<br>② 若曾点过拒绝，请在浏览器的网站设置和手机系统设置中允许相机。<br>③ 微信没有授权提示时，点右上角“···”，在系统浏览器打开。苹果可用 Safari，安卓可用 Chrome 或系统浏览器。</p><button id="cameraLink" type="button">复制网址到系统浏览器</button><button id="checkGesture" type="button">检查手势识别资源</button><p id="cameraDetail">相机兼容版 20261110.1</p></details>
+ <div class="camera-recovery"><button id="restartTracking" type="button" hidden>重新识别</button><button id="cameraResume" type="button" hidden>继续播放摄像头</button><button id="cameraStop" type="button" hidden>关闭 / 取消摄像头</button></div>
+ <details id="cameraHelp" class="camera-help"><summary>摄像头打不开？</summary><p>① 在本页点击开启，允许相机权限。<br>② 若曾点过拒绝，请在浏览器的网站设置和手机系统设置中允许相机。<br>③ 微信没有授权提示时，点右上角“···”，在系统浏览器打开。苹果可用 Safari，安卓可用 Chrome 或系统浏览器。</p><button id="cameraLink" type="button">复制网址到系统浏览器</button><button id="checkGesture" type="button">检查手势识别资源</button><p id="cameraDetail">相机兼容版 20261110.2</p></details>
  <div class="secondary-actions"><button id="calibrate" disabled>校准捏合范围</button><button id="reset">回到纸团</button></div>
  <div class="gesture-legend"><div><span class="gesture-mark">↔</span><p>两指分开<small>建筑舒展</small></p></div><div><span class="gesture-mark">→←</span><p>两指捏合<small>折回纸团</small></p></div></div>
  <p class="privacy"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m8 1 5 2v5c0 3-5 6-5 6S3 11 3 8V3Z"/><path d="m5 7 2 2 4-4"/></svg>画面在本机处理，不上传、不录制。</p>
@@ -43,6 +44,6 @@
 <footer><span>LLP · 一座建筑，一次在指尖发生的相遇。 <button type="button" id="shareLink">复制分享链接 ↗</button></span><span>保持手掌朝向镜头 · 光线均匀时体验更佳</span></footer>
 </main>
 <dialog id="calibrationDialog"><button class="dialog-close" id="closeCalibration" aria-label="关闭校准">×</button><p class="eyebrow">MAKE IT YOURS</p><h2>找到你的捏合范围</h2><p id="calibrationText">第一步：拇指与食指轻轻捏紧，保持在镜头内，再点击记录。</p><div class="calibration-steps"><span id="stepClose" class="active">1 · 捏紧</span><i></i><span id="stepOpen">2 · 分开</span></div><button class="primary" id="recordCalibration">记录捏紧位置</button><p class="dialog-note" id="calibrationNote">保持手掌朝向镜头，记录期间保持稳定。</p></dialog>
-<script type="module" src="./app.mjs?v=20261110-1"></script>
+<script type="module" src="./app.mjs?v=20261110-2"></script>
 </body></html>
 
