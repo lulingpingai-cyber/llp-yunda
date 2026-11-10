@@ -7,3 +7,16 @@
 .wechat-hint{margin-top:20px;padding:14px 17px;background:#eaece3;border:1px solid #d9dccf;border-radius:5px;color:#626d57;font-size:11px;line-height:1.8}.wechat-hint[hidden]{display:none}.wechat-hint strong{display:block;font-size:12px;font-weight:500}.wechat-hint span{display:block;color:#7b8272}.brand>span{white-space:nowrap}@media(max-width:740px){.brand>span{font-size:18px;letter-spacing:1px}.brand{gap:7px}.brand svg{width:24px;height:24px}.edition{font-size:8px}}
 
 .art canvas{transition:opacity .14s ease}.art.is-switching canvas{opacity:.55}.cache-hint{font-size:9px;letter-spacing:.6px;color:#969e8b;margin:18px 0 0}
+
+
+/* Keep camera video attached to layout: mobile WebKit can defer hidden playback. */
+.camera-box video{display:block}
+.camera-box:not(.on) video{opacity:0}
+.camera-box.on video{opacity:1}
+.camera-recovery{display:flex;justify-content:space-between;gap:12px;margin-top:9px;grid-column:2}
+.camera-recovery button,.camera-help button{font:inherit;font-size:11px;border:1px solid #d4d8ca;background:#eaece3;color:#58624e;border-radius:4px;padding:8px 10px}
+.camera-recovery [hidden]{display:none!important}
+.camera-help{font-size:11px;line-height:1.8;margin-top:13px;color:#68735d;grid-column:1/-1}
+.camera-help summary{cursor:pointer;color:var(--accent)}
+.camera-help p{overflow-wrap:anywhere;margin:8px 0}
+#cameraDetail{font-size:10px;color:#8a907f}
