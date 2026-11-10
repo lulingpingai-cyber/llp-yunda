@@ -142,6 +142,13 @@ async function startCamera(){
 el.cameraToggle.addEventListener('click',()=>cameraActive?stopCamera():startCamera());
 $('cameraStop').addEventListener('click',stopCamera);
 $('cameraResume').addEventListener('click',startCamera);
+$('checkGesture').addEventListener('click',async()=>{
+ const button=$('checkGesture');button.disabled=true;button.textContent='正在检查识别资源…';
+ $('cameraDetail').textContent='正在加载本网站的识别程序与模型，不会打开摄像头。首次检查可能需要约一分钟。';
+ try{await withDeadline(getModel(),90000,'ModelTimeout');$('cameraDetail').textContent='识别资源已就绪。现在可以点击“开启手势体验”并允许相机权限。';}
+ catch(error){$('cameraDetail').textContent=`识别资源检查失败：${error.name||'Error'} · ${String(error.message||'请检查网络或更换系统浏览器').slice(0,240)}`;}
+ finally{button.disabled=false;button.textContent='检查手势识别资源';}
+});
 $('cameraLink').addEventListener('click',async()=>{
  const url=new URL(location.href);url.search='?v=20261110-1';url.hash='';
  try{await navigator.clipboard.writeText(url.href);$('cameraLink').textContent='网址已复制，请粘贴到系统浏览器';}
